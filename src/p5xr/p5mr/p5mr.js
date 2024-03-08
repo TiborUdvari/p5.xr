@@ -116,7 +116,7 @@ export default class p5mr extends p5xr {
     p5.instance._renderer._curCamera.cameraType = 'custom';
     const refSpaceRequest = this.isImmersive ? 'local' : 'viewer';
     console.log('Requesting reference space with mode: ' + refSpaceRequest);
-    this.gl = this.canvas.getContext('webgl');
+    this.gl = this.canvas.getContext(p5.instance.webglVersion);
     this.gl
       .makeXRCompatible()
       .then(() => {

@@ -2,6 +2,7 @@ import p5xrViewer from './p5xrViewer';
 import p5xrButton from './p5xrButton';
 import p5xrInput from './p5xrInput';
 import '../features/handtracking';
+import '../features/controllertracking';
 
 /**
  * p5vr class holds all state and methods that are specific to VR
@@ -211,6 +212,12 @@ export default class p5xr {
       window.setup();
       p5.instance._millisStart = window.performance.now();
     }
+
+    // register the squeeze event
+    // taking this method from the p5.js main.js file
+    const m = p5.prototype._onsqueeze.bind(p5.instance);
+    this.xrSession.addEventListener('squeeze', m, { passive: false });
+
     // const refSpaceRequest = this.isImmersive ? 'local' : 'viewer';
     // this.xrSession.requestReferenceSpace(refSpaceRequest).then((refSpace) => {
     //   this.xrRefSpace = refSpace;
@@ -305,6 +312,7 @@ export default class p5xr {
 
     for (const inputSource of session.inputSources) {
       _handleHandInput(frame, this.xrRefSpace, inputSource);
+      _handleControllerInput(frame, this.xrRefSpace, inputSource);
     }
 
     // Getting the pose may fail if, for example, tracking is lost. So we

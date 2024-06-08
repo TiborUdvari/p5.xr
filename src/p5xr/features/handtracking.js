@@ -43,8 +43,10 @@ p5.prototype.handMain = p.handRight;
 p5.prototype.hand = p.handMain;
 p5.prototype.handAlt = p.handLeft;
 
-const flatMatrices = new Float32Array(16 * 25); // one 4x4 mat for 25 joints
-const radii = new Float32Array(25);
+p5.prototype.flatMatrices = new Float32Array(16 * 25); // one 4x4 mat for 25 joints
+p5.prototype.flatMatricesFull = new Float32Array(16 * 50); // one 4x4 mat for 25 joints
+p5.prototype.radii = new Float32Array(25);
+p5.prototype.radiiFull = new Float32Array(50);
 
 p5.prototype._pinchTreshold = 25e-3; // about 25 mm
 p5.prototype.fingersArePinched = false;
@@ -67,6 +69,8 @@ p5.prototype._handleOnPinch = function () {
 
 p5.prototype._handleHandInput = function (frame, refSpace, inputSource) {
   // todo: Refactor to only do this once
+  this._setProperty('flatMatrices', this.flatMatrices);
+  this._setProperty('radii', this.radii);
   this._setProperty('hands', this.hands);
   this._setProperty('fingerLeft', this.fingerLeft);
   this._setProperty('fingerRight', this.fingerRight);
@@ -90,21 +94,24 @@ p5.prototype._handleHandInput = function (frame, refSpace, inputSource) {
     return;
   }
 
-  if (!frame.fillPoses(inputSource.hand.values(), refSpace, flatMatrices)) {
+  if (!frame.fillPoses(inputSource.hand.values(), refSpace, this.flatMatrices)) {
     // throw new Error('No fill poses received');
     // console.log('positions not filled');
     return;
   }
 
   // eslint-disable-next-line no-unused-vars
-  const areRadiiFilled = frame.fillJointRadii(inputSource.hand.values(), radii); // todo - handle when we don't get them
+  const areRadiiFilled = frame.fillJointRadii(inputSource.hand.values(), this.radii); // todo - handle when we don't get them
   if (!areRadiiFilled) {
     console.log('radii not filled');
   }
 
   const off = inputSource.handedness === 'left' ? 0 : 25;
+  this.flatMatricesFull.set(this.flatMatrices, off * 16);
+  this.radiiFull.set(this.radii, off);
+
   for (let i = 0; i < 25; i++) {
-    const mat = flatMatrices.slice(i * 16, (i + 1) * 16);
+    const mat = this.flatMatrices.slice(i * 16, (i + 1) * 16);
     this.hands[i + off].x = mat[12];
     this.hands[i + off].y = mat[13];
     this.hands[i + off].z = mat[14];
@@ -134,6 +141,42 @@ p5.prototype._handleHandInput = function (frame, refSpace, inputSource) {
   // mat4.getTranslation(indexFingerBox.translation, matrix);
   // mat4.getRotation(indexFingerBox.rotation, matrix);
   // indexFingerBox.scale = [0.02, 0.02, 0.02];
+};
+
+p5.prototype.fillHandData = function () {
+  // debugger;
+  this._setProperty('flatMatrices', this.flatMatrices);
+  this._setProperty('radii', this.radii);
+  this._setProperty('hands', this.hands);
+  this._setProperty('fingerLeft', this.fingerLeft);
+  this._setProperty('fingerRight', this.fingerRight);
+  this._setProperty('finger', this.finger);
+  this._setProperty('fingerMain', this.fingerMain);
+  this._setProperty('fingerAlt', this.fingerAlt);
+
+  this._setProperty('fingers', this.fingers);
+  this._setProperty('fingersLeft', this.fingersLeft);
+  this._setProperty('fingersRight', this.fingersRight);
+  this._setProperty('fingersMain', this.fingersMain);
+  this._setProperty('fingersAlt', this.fingersAlt);
+
+  this._setProperty('handLeft', this.handLeft);
+  this._setProperty('handRight', this.handRight);
+  this._setProperty('hand', this.hand);
+  this._setProperty('handMain', this.handMain);
+  this._setProperty('handAlt', this.handAlt);
+
+  const off = 0;
+  for (let i = 0; i < 50; i++) {
+    const mat = this.flatMatricesFull.slice(i * 16, (i + 1) * 16);
+    this.hands[i + off].x = mat[12];
+    this.hands[i + off].y = mat[13];
+    this.hands[i + off].z = mat[14];
+    this.hands[i + off].mat4 = mat;
+    this.hands[i + off].rad = this.radiiFull[i];
+  }
+  this._handleOnPinch();
+  this._setProperty('pFingersArePinched', this.fingersArePinched);
 };
 
 p5.prototype.mainHandMode = function (mode) {

@@ -400,6 +400,7 @@ export default class p5xr {
         context.scale(context._pixelDensity, context._pixelDensity);
       }
 
+      p5.instance.callRegisteredHooksFor('pre');
       this.__updateXR();
 
       p5.instance._inUserDraw = true;
@@ -409,6 +410,8 @@ export default class p5xr {
       } finally {
         p5.instance._inUserDraw = false;
       }
+
+      p5.instance.callRegisteredHooksFor('post');
     }
   }
 

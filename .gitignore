@@ -1,3 +1,11 @@
+scripts/radata/
+scripts/backup-data/*.json
+scripts/backup-data/*
+scripts/radata/
+*/backup-data/*
+radata
+*/radata*
+*.tmp
 .cache/*
 .parcel-cache/*
 node_modules/*

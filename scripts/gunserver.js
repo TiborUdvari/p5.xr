@@ -1,8 +1,25 @@
 const Gun = require('gun');
 const http = require('http');
+const https = require('https');
+const fs = require('fs');
+const path = require('path');
+
+// Load SSL/TLS certificates
+const options = {
+  key: fs.readFileSync(path.resolve(__dirname, '../key.pem')),
+  cert: fs.readFileSync(path.resolve(__dirname, '../cert.pem')),
+  secureProtocol: 'TLSv1_2_method', // Enforce TLS 1.2
+  ciphers: [
+    'ECDHE-RSA-AES128-GCM-SHA256',
+    'ECDHE-RSA-AES128-SHA256',
+    'AES128-GCM-SHA256',
+    'AES128-SHA256'
+  ].join(':'),
+  honorCipherOrder: true // Use server's order of preference for ciphers
+};
 
 // Create a server
-const server = http.createServer((req, res) => {
+const server = https.createServer(options, (req, res) => {
   if (Gun.serve(req, res)) return; // Serve gun requests
   res.writeHead(200);
   res.end('Gun.js Peer Server');

@@ -46,6 +46,7 @@
     "dev-server": "http-server -S -C cert.pem -K key.pem -o",
     "gun-server": "cd scripts && node gunserver.js",
     "gun-backup": "cd scripts && node gunbackup.js",
+    "gun-log": "cd scripts && node gunlog.js",
     "jsdoc2md": "grunt jsdoc2md"
   },
   "repository": {

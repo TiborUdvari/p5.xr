@@ -6,7 +6,7 @@ require('gun/lib/load.js');
 require('gun/lib/radix'); // Use IndexedDB for larger storage capacity
 
 const gun = Gun({
-  peers: ['http://localhost:8765/gun'],
+  peers: ['https://localhost:8765/gun'],
   localStorage: false,
   radix: true,
 });

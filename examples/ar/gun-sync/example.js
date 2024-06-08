@@ -1,14 +1,19 @@
 function preload() {
-  // createARCanvas();
+  createARCanvas();
 }
 
 function setup() {
-  describe("Gun sync");
+  describe("A sphere on your right index finger");
 }
 
 function draw() {
-  // if (frameCount < 10) {
-  //   console.log(frameCount);
-  // }
-  // console.log("draw");
+  mainHandMode(RIGHT);
+  // console.log(flatMatrices[0]);
+  // console.log("finger ", finger.x);
+  normalMaterial();
+  push();
+  translate(finger.x, finger.y, finger.z);
+  sphere(0.01);
+  pop();
 }
+

@@ -87,7 +87,7 @@ function processSimulationData(data) {
 let simData = null;
 let simTimelineIndex = null;
 
-p5.prototype.sendSimDataEntry = function () {
+p5.prototype.sendSimDataEntry = function() {
   if (!p5.prototype.isSimulatingHeadset) return;
 
   simTimelineIndex = (simTimelineIndex + 1) % simData.length;
@@ -95,17 +95,17 @@ p5.prototype.sendSimDataEntry = function () {
   liveNode.put(data);
 };
 
-p5.prototype.simulateHeadsetData = function (data) {
+p5.prototype.simulateHeadsetData = function(data) {
   console.log('Simulating headset data');
   simData = processSimulationData(data);
   p5.prototype.isSimulatingHeadset = true;
 };
 
-p5.prototype.stopHeadsetSim = function () {
+p5.prototype.stopHeadsetSim = function() {
   p5.prototype.unregisterMethod('remove', sendSimDataEntry);
 };
 
-p5.prototype.sendHeadsetData = function () {
+p5.prototype.sendHeadsetData = function() {
   if (!p5.prototype.isGunSender) return;
 
   const timestamp = Date.now();
@@ -139,14 +139,16 @@ p5.prototype.sendHeadsetData = function () {
   // sessionNode.set(data);
 };
 
-p5.prototype._receiveSenderData = function (data) {
+p5.prototype._receiveSenderData = function(data) {
   // console.log('Received data:', data);
   // eslint-disable-next-line no-unused-vars
   receivedData = data;
 };
 
-p5.prototype.assignReceivedData = function () {
+p5.prototype.assignReceivedData = function() {
   if (!p5.prototype.isGunReceiver) return;
+
+  background(0, 255, 0); // do for later greenscreen
   const {
     _, title, timestamp, hands, flatMatricesFull, radiiFull, ...cleanData
   } = receivedData;
@@ -154,7 +156,7 @@ p5.prototype.assignReceivedData = function () {
   // Object.assign(window, cleanData);
   if (flatMatricesFull != null) {
     const decoded = base64ToFloat32Array(flatMatricesFull);
-    if (decoded[0] === NaN) console.log("nan detected")
+    if (decoded[0] === NaN) console.log('nan detected');
     if (decoded) {
       this.flatMatricesFull.set(decoded);
       this.fillHandData();
@@ -171,16 +173,25 @@ function receiverSetup() {
   p5.prototype.registerMethod('pre', p5.prototype._assignReceivedData);
   liveNode.on((data) => p5.prototype._receiveSenderData(data));
 
-  window.preload = function () {
+  window.preload = function() {
     console.log('Gun sync overriden setup');
     if (typeof window.simPreload === 'function') {
       window.simPreload();
     }
   };
 
-  window.setup = function () {
+  window.setup = function() {
     createCanvas(windowWidth, windowHeight, WEBGL);
     background(0, 255, 0);
+
+    const fov = PI / 2; // approximately 90 degrees
+    const aspect = width / height;
+    const near = 0.01;
+    const far = 1000;
+
+    perspective(fov, aspect, near, far);
+    camera(0, 0, 0, 0, 0, -1, 0, -1, 0);
+
     if (typeof window.simSetup === 'function') {
       window.simSetup();
     }
@@ -194,8 +205,8 @@ function setupSenderReceiver() {
   // TODO - get if the session supports immersive-ar instead
   // Needs to be sync so the overrives get added before p5 launches
   // const isReceiver = !navigator.userAgent.includes('Oculus');
-
-  const isSender = isWebXRPolyfillActive();
+  const isOculusBrowser = navigator.userAgent.includes('Oculus');
+  const isSender = isWebXRPolyfillActive() || isOculusBrowser;
 
   if (isSender) {
     senderSetup();

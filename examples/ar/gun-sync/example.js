@@ -7,11 +7,12 @@ function setup() {
 }
 
 function controllerSqueezed(e){
-console.log("squeeze");
+  console.log("squeeze");
   console.log(e)
 }
 
 function draw() {
+  console.log(controllerRightTriggering)
   // orbitControl();
   mainHandMode(RIGHT);
   // console.log(flatMatrices[0]);

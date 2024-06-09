@@ -217,11 +217,11 @@ p5.prototype._handleControllerInput = function (frame, refSpace, inputSource) {
   this.controllers[off].z = mat[14];
   this.controllers[off].mat4 = mat;
 
-  if (this.leftControllerTriggered) {
+  if (this.controllerLeftTriggering) {
     this.interestPointLeft = this.controllerLeft.mat4;
   }
 
-  if (this.rightControllerTriggered) {
+  if (this.controllerRightTriggering) {
     this.interestPointRight = this.controllerRight.mat4;
   }
 };

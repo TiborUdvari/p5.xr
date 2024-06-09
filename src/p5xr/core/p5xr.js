@@ -215,9 +215,24 @@ export default class p5xr {
 
     // register the squeeze event
     // taking this method from the p5.js main.js file
-    const m = p5.prototype._onsqueeze.bind(p5.instance);
-    this.xrSession.addEventListener('squeeze', m, { passive: false });
+    const onsqueeze = p5.prototype._onsqueeze.bind(p5.instance);
+    this.xrSession.addEventListener('squeeze', onsqueeze, { passive: false });
 
+    const onsqueezestart = p5.prototype._onsqueezestart.bind(p5.instance);
+    this.xrSession.addEventListener('squeezestart', onsqueezestart, { passive: false });
+
+    const onsqueezeend = p5.prototype._onsqueezeend.bind(p5.instance);
+    this.xrSession.addEventListener('squeezeend', onsqueezeend, { passive: false });
+
+    const onselect = p5.prototype._onselect.bind(p5.instance);
+    this.xrSession.addEventListener('select', onselect, { passive: false });
+
+    const onselectstart = p5.prototype._onselectstart.bind(p5.instance);
+    this.xrSession.addEventListener('selectstart', onselectstart, { passive: false });
+
+    const onselectend = p5.prototype._onselectend.bind(p5.instance);
+    this.xrSession.addEventListener('selectend', onselectend, { passive: false });
+    
     // const refSpaceRequest = this.isImmersive ? 'local' : 'viewer';
     // this.xrSession.requestReferenceSpace(refSpaceRequest).then((refSpace) => {
     //   this.xrRefSpace = refSpace;

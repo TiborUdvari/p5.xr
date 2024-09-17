@@ -15,6 +15,9 @@ class p5xrViewer {
     this.rightPMatrix = new p5.Matrix();
 
     this.position = new p5.Vector(0, 0, 0);
+    if (window.parent) {
+      window.parent.xrViewer = this;
+    }
 
     this.setPosition = function (x, y, z) {
       this.position.set(x, y, z);
@@ -41,21 +44,59 @@ class p5xrViewer {
    */
   set view(newView) {
     this._view = newView;
-
+    // console.log("set view");
     // eslint-disable-next-line no-unused-expressions
+    // console.log(this._pose.views[0].transform.position.y);
+    // console.log(p5xr.instance.viewer._pose.views[0].transform.position.y);
+    // console.log(p5.instance === window.parent.p5frame.contentWindow.p5.instance);
+    let c = window;
+    let cv = this;
+
+    if (window.parent) {
+      cv = window.parent.xrViewer;
+      c = window.parent.p5frame.contentWindow;
+    }
+
+    // the correct p5instance is present
+    // the overrides didn't seem to work. It did work but the camera is not being set correctly
+
+    if (window.parent.tibFrames.length <= 1) {
+      p5.instance.background(0, 255, 0);
+    } else {
+      p5.instance.background(255, 255, 0);
+    }
+
+    // console.log("set view");
     p5.instance._renderer.uViewMatrix?.set(this._view.transform.inverse.matrix);
+    if (p5.instance._renderer.uViewMatrix) {
+      p5.instance._renderer.uViewMatrix.mat4 =
+        this._view.transform.inverse.matrix;
+    }
 
     // has not effect in v1.10.0, but kept for older version
     p5.instance._renderer.uMVMatrix.set(this._view.transform.inverse.matrix);
-    p5.instance._renderer.uPMatrix.set(this._view.projectionMatrix);
+    p5.instance._renderer.uMVMatrix.mat4 = this._view.transform.inverse.matrix;
+    p5.instance._renderer.uPMatrix.mat4 = this._view.projectionMatrix;
+
+    // console.log(identity instanceof p5.Matrix);
+    // console.log(p5.Matrix.identity());
+    // console.log(this._view.transform.inverse.matrix);
+    // console.log(res);
+    // why is the result undefined ????????
+    // c.p5.instance._renderer._curCamera.cameraMatrix.set(res);
+    // console.log(c.p5.instance._renderer._curCamera.cameraMatrix);
     p5.instance._renderer._curCamera.cameraMatrix.set(
-      p5.Matrix.identity().mult(this._view.transform.inverse.matrix),
+      this._view.transform.inverse.matrix,
     );
+    p5.instance._renderer._curCamera.cameraMatrix.mat4 =
+      this._view.transform.inverse.matrix;
+    // console.log(c.p5.instance._renderer._curCamera.cameraMatrix.mat4[13]);
+    // is there a second one that sets it to 0 somewhere???
 
     if (newView.eye === 'left') {
-      this.leftPMatrix.set(p5.instance._renderer.uPMatrix.copy());
+      this.leftPMatrix.set(c.p5.instance._renderer.uPMatrix.copy());
     } else {
-      this.rightPMatrix.set(p5.instance._renderer.uPMatrix.copy());
+      this.rightPMatrix.set(c.p5.instance._renderer.uPMatrix.copy());
     }
   }
 

@@ -2,6 +2,29 @@ import p5xrViewer from './p5xrViewer';
 import p5xrButton from './p5xrButton';
 import p5xrInput from './p5xrInput';
 
+window.addEventListener('beforeunload', function (event) {
+  console.log('TIBOR - here ----------------------------');
+  // clean up stuff
+  // cancel the animation frame
+  // add a listener to see when the thing was unloaded
+
+  if (window.parent) {
+    console.log('update render state');
+    window.parent.xrSession.cancelAnimationFrame(this.animationFrameId);
+    window.parent.xrSession.updateRenderState();
+  }
+  if (p5.instance) {
+    p5.instance.remove();
+  } else {
+    console.log('p5 instance not defined');
+  }
+  if (p5xr.instance) {
+    p5xr.instance.remove();
+  } else {
+    console.log('p5.xr instance is falsy');
+  }
+});
+
 /**
  * p5vr class holds all state and methods that are specific to VR
  * @class
@@ -28,7 +51,12 @@ import p5xrInput from './p5xrInput';
 export default class p5xr {
   constructor(options = {}) {
     const { requiredFeatures = [], optionalFeatures = [] } = options;
-
+    if (window.parent) {
+      if (!window.parent.tibFrames) {
+        window.parent.tibFrames = [];
+      }
+      window.parent.tibFrames.push(Math.random());
+    }
     this.xrDevice = null;
     this.isVR = null;
     this.mode = 'inline';
@@ -42,9 +70,34 @@ export default class p5xr {
     this.gl = null;
     this.curClearColor = color(255, 255, 255);
     this.viewer = new p5xrViewer();
+    this.id = Math.random() * 100;
 
     this.requiredFeatures = requiredFeatures;
     this.optionalFeatures = optionalFeatures;
+
+    console.log('Broadcast setup');
+    const channel = new BroadcastChannel('xr-channel');
+    window.channel = channel;
+    window.channel.onmessage = (event) => {
+      const data = event.data;
+      console.log('Received data:', data);
+    };
+
+    console.log('TIB ------ register unload event');
+    const registry = new FinalizationRegistry((heldValue) => {
+      console.log(
+        `Object with value "${heldValue}" has been garbage collected.`,
+      );
+    });
+
+    registry.register(p5.instance, 'P5 INSTANCE');
+    registry.register(this, 'P5 XR INSTANCE');
+
+    // In your iframe's JavaScript code
+    // window.addEventListener('beforeunload', function (event) {
+    //   console.log('before unloading iframe');
+    //   p5.instance.remove();
+    // });
   }
 
   /**
@@ -182,6 +235,7 @@ export default class p5xr {
     this.xrHitTestSource = null;
     this.gl = null;
     this.frame = null;
+    // Reset parent XR session
   }
 
   /**
@@ -194,18 +248,43 @@ export default class p5xr {
       console.log(`Requesting session with mode: ${this.mode}`);
       this.isImmersive = true;
       this.resetXR();
-      navigator.xr
-        .requestSession(this.mode, {
-          requiredFeatures: this.requiredFeatures,
-          optionalFeatures: this.optionalFeatures,
-        })
-        .then((session) => {
+
+      const context = window.parent ? window.parent : window;
+      // const context = window;
+      // todo - also check if real device
+      if (context.xrSession) {
+        console.log('parent xr session');
+        try {
+          let session = window.parent.xrSession;
+          console.log('parent session');
           this.xrButton.setSession(session);
           this.__startSketch.call(this, session);
-        })
-        .catch((error) => {
-          console.error(`An error occured activating ${this.mode}: ${error}`);
-        });
+          // this.__onRequestSession(true);
+        } catch (err) {
+          console.log('error with the parent mode');
+          // cannot read properties of null, getcontext
+          console.error(err);
+        }
+      } else {
+        context.navigator.xr
+          .requestSession(this.mode, {
+            requiredFeatures: this.requiredFeatures,
+            optionalFeatures: this.optionalFeatures,
+          })
+          .then((session) => {
+            if (window.parent) {
+              window.parent.xrSession = session;
+
+              p5.instance.randomId = Math.random();
+              // window.parent.xrSession.p5instance = p5.instance;
+            }
+            this.xrButton.setSession(session);
+            this.__startSketch.call(this, session);
+          })
+          .catch((error) => {
+            console.error(`An error occured activating ${this.mode}: ${error}`);
+          });
+      }
     } else {
       this.xrButton.hide();
     }
@@ -230,6 +309,11 @@ export default class p5xr {
    * @ignore
    */
   __startSketch(session) {
+    console.log('start sketch with session');
+    console.log(session);
+    console.log('p5xr instance');
+    console.log(p5xr.instance);
+
     this.xrSession = session;
     this.canvas = p5.instance.canvas;
     this.canvas.style.visibility = 'visible';
@@ -238,19 +322,25 @@ export default class p5xr {
     p5.instance._renderer._curCamera.useLinePerspective = false;
 
     if (typeof window.setup === 'function') {
+      console.log('ss 1');
       if (!p5.instance._setupDone) {
         window.setup();
+        console.log('ss 2');
       }
       p5.instance._millisStart = window.performance.now();
     }
 
     this.__setupSensibleXRDefaults();
 
+    console.log('ss 3');
     const refSpaceRequest = this.isImmersive ? 'local' : 'viewer';
     this.xrSession.requestReferenceSpace(refSpaceRequest).then((refSpace) => {
       this.xrRefSpace = refSpace;
       // Inform the session that we're ready to begin drawing.
-      this.xrSession.requestAnimationFrame(this.__onXRFrame.bind(this));
+      console.log('ss 4');
+      this.animationFrameId = this.xrSession.requestAnimationFrame(
+        this.__onXRFrame.bind(this),
+      );
       if (!this.isImmersive) {
         this.xrSession.updateRenderState({
           baseLayer: new XRWebGLLayer(this.xrSession, this.gl),
@@ -267,11 +357,14 @@ export default class p5xr {
    * @private
    * @ignore
    */
-  __onRequestSession() {
-    this.xrSession.addEventListener('end', (event) =>
-      this.__onSessionEnded(event),
-    );
+  __onRequestSession(reuse = false) {
+    if (!reuse) {
+      this.xrSession.addEventListener('end', (event) =>
+        this.__onSessionEnded(event),
+      );
+    }
 
+    console.log('ss 5');
     const refSpaceRequest = this.isImmersive ? 'local' : 'viewer';
     this.gl = this.canvas.getContext(p5.instance.webglVersion);
     this.gl
@@ -280,12 +373,15 @@ export default class p5xr {
         // Use the p5's WebGL context to create a XRWebGLLayer and set it as the
         // sessions baseLayer. This allows any content rendered to the layer to
         // be displayed on the XRDevice;
+
+        console.log('ss 6');
         this.xrSession.updateRenderState({
           baseLayer: new XRWebGLLayer(this.xrSession, this.gl),
         });
         // TODO : need better way to handle feature-specific actions
         if (this.requiredFeatures.includes('hit-test')) {
           this.xrSession.requestReferenceSpace('viewer').then((refSpace) => {
+            console.log('ss 7');
             this.xrViewerSpace = refSpace;
             this.xrSession
               .requestHitTestSource({ space: this.xrViewerSpace })
@@ -301,6 +397,7 @@ export default class p5xr {
         this.xrSession
           .requestReferenceSpace(refSpaceRequest)
           .then((refSpace) => {
+            console.log('ss 8');
             this.xrRefSpace = refSpace;
             // Request initial animation frame
             this.xrSession.requestAnimationFrame(this.__onXRFrame.bind(this));
@@ -321,10 +418,18 @@ export default class p5xr {
    * @ignore
    */
   __onXRFrame(t, frame) {
-    const session = (this.xrSession = frame.session);
-    if (session === null || this.gl === null) {
+    channel.postMessage({ data: 'draw' });
+
+    if (!p5.instance) {
+      console.log('xr frame p5 instance null');
       return;
     }
+    const session = (this.xrSession = frame.session);
+    if (session === null || this.gl === null) {
+      console.log('session null');
+      return;
+    }
+    // console.log('xr frame ');
     // Inform the session that we're ready for the next frame.
     session.requestAnimationFrame(this.__onXRFrame.bind(this));
 
@@ -339,6 +444,9 @@ export default class p5xr {
     const viewer = frame.getViewerPose(this.xrRefSpace);
     const glLayer = session.renderState.baseLayer;
     this.frame = frame;
+    if (!viewer) {
+      console.log('no viewer');
+    }
     // Getting the pose may fail if, for example, tracking is lost. So we
     // have to check to make sure that we got a valid pose before attempting
     // to render with it. If not in this case we'll just leave the
@@ -371,6 +479,7 @@ export default class p5xr {
 
       let i = 0;
       for (const view of this.viewer.pose.views) {
+        // console.log(view);
         this.viewer.view = view;
         const scaleFactor = this.isImmersive ? 1 : pixelDensity();
         const viewport = glLayer.getViewport(this.viewer.view);
@@ -461,6 +570,7 @@ export default class p5xr {
    * @ignore
    */
   __onEndSession(session) {
+    console.log('requesting end session');
     if (!this.isVR) {
       this.xrHitTestSource.cancel();
       this.xrHitTestSource = null;
@@ -487,7 +597,11 @@ export default class p5xr {
    * @ignore
    */
   __onSessionEnded() {
+    console.log('on session ended');
     this.resetXR();
+    if (window.parent) {
+      window.parent.xrSession = null;
+    }
   }
 
   /**

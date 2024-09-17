@@ -20,6 +20,8 @@ import compareVersions from '../utilities/versionComparator';
 
 const originalCreateCanvas = p5.prototype.createCanvas;
 p5.prototype.createCanvas = function (w, h, renderer, canvas) {
+  console.log("P5XR CREATE CANVAS OVERRIDE");
+
   let effectiveRenderer = renderer;
   const isXRNoUserAction =
     renderer === constants.AR || renderer === constants.VR;
